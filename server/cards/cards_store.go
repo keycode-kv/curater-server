@@ -1,6 +1,7 @@
 package cards
 
 import (
+	"context"
 	"curater/app"
 	"database/sql"
 	"errors"
@@ -124,12 +125,21 @@ const (
 			ct.summary ILIKE '%s' 
 			)`
 
-	getTagCl
-
 	getTags = `SELECT t.tag
         FROM content_tags ct
         JOIN tags t ON ct.tag_id = t.id
         WHERE ct.content_id = $1`
+
+	getTagListQuery = `select tag from tags;`
+
+	updateCardByIDQuery = `UPDATE cards
+		SET updated_at = now()`
+
+	updateCardByIDWhereClause = ` WHERE id = $1 RETURNING id, status;`
+
+	updateCardStats      = `, status = $%d`
+	updateCardCollection = `, collection_id = $%d`
+	updateCardIsViewed   = `, is_viewed = $%d`
 )
 
 type Card struct {
@@ -137,6 +147,7 @@ type Card struct {
 	ContentID     int      `db:"content_id" json:"-"`
 	Title         string   `db:"title" json:"title,omitempty"`
 	Content       string   `db:"content" json:"-"`
+	Status        string   `db:"status" json:"-"`
 	Rating        float64  `json:"rating"`
 	RatingCount   int      `json:"rating_count"`
 	CommentsCount int      `json:"comments_count"`
@@ -311,4 +322,40 @@ func stripHTMLTags(s string) string {
 	}
 	result = strings.Join(strings.Fields(result), " ")
 	return result
+}
+
+func getTagList(ctx context.Context) (tags []string, err error) {
+	err = app.GetDB().SelectContext(ctx, &tags, getTagListQuery)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func updateCardInfo(ctx context.Context, request updateCardRequest) (cardInfo Card, err error) {
+	var argsList []interface{}
+	query := updateCardByIDQuery
+	argsList = append(argsList, request.ID)
+
+	if len(request.Status) > 0 {
+		argsList = append(argsList, request.Status)
+		query += fmt.Sprintf(updateCardStats, len(argsList))
+	}
+	if request.CollectionID != 0 {
+		argsList = append(argsList, request.CollectionID)
+		query += fmt.Sprintf(updateCardCollection, len(argsList))
+	}
+	if request.IsViewed {
+		argsList = append(argsList, request.IsViewed)
+		query += fmt.Sprintf(updateCardIsViewed, len(argsList))
+	}
+	query += updateCardByIDWhereClause
+
+	// fmt.Println("query: ", query)
+	// fmt.Println("argsList: ", argsList)
+	err = app.GetDB().GetContext(ctx, &cardInfo, query, argsList...)
+	if err != nil {
+		return
+	}
+	return
 }
