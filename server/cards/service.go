@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -154,11 +155,14 @@ func PostRating() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		var request PostRatingRequest
 
+		vars := mux.Vars(req)
+		contentID, _ := strconv.Atoi(vars["id"])
 		err := json.NewDecoder(req.Body).Decode(&request)
 		if err != nil {
 			api.RespondWithJSON(rw, http.StatusBadRequest, "error decoding request")
 			return
 		}
+		request.ContentID = contentID
 		userID := req.Context().Value("user")
 		err = InsertRating(userID.(string), request)
 		if err != nil {
@@ -166,7 +170,7 @@ func PostRating() http.HandlerFunc {
 			api.RespondWithJSON(rw, http.StatusBadRequest, err.Error())
 			return
 		}
-		api.RespondWithJSON(rw, http.StatusOK, "comment has been posted")
+		api.RespondWithJSON(rw, http.StatusOK, "rating has been submitted")
 
 	})
 }

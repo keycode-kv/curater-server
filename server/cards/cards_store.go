@@ -173,7 +173,7 @@ type user struct {
 }
 type Card struct {
 	ID            int      `db:"id" json:"id,omitempty"`
-	CollectionID  int      `db:"collection_id" json:"collection_id"`
+	CollectionID  *int     `db:"collection_id" json:"collection_id"`
 	ContentID     int      `db:"content_id" json:"-"`
 	Title         string   `db:"title" json:"title,omitempty"`
 	Content       string   `db:"content" json:"-"`
@@ -221,6 +221,7 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 
 	err := app.GetDB().Select(&cards, query, userID)
 	if err != nil {
+		fmt.Println("error selecting cards, error: ", err.Error())
 		return nil, err
 	}
 

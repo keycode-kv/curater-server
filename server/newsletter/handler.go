@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gojektech/heimdall/v6/httpclient"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/gojektech/heimdall/v6/httpclient"
 )
 
 const setContent = `INSERT INTO public."content"
@@ -83,13 +84,17 @@ func (s NewsLetter) createContent(ctx context.Context) {
 		go generateSummary(id)
 	}
 
-	if err != nil && err.Error() == "pq: duplicate key value violates unique constraint \"content_title_source_email\"" {
-		fmt.Println("duplicate newsletter")
-		err = app.GetDB().GetContext(ctx, &id, getIDBySubjectAndSender, s.Header.Subject, senderEmail)
-		if err != nil {
-			fmt.Println("potti pandaaram adangi", err.Error())
-			return
+	if err != nil {
+		if err.Error() == "pq: duplicate key value violates unique constraint \"content_title_source_email\"" {
+			fmt.Println("duplicate newsletter")
+			err = app.GetDB().GetContext(ctx, &id, getIDBySubjectAndSender, s.Header.Subject, senderEmail)
+			if err != nil {
+				fmt.Println("potti pandaaram adangi", err.Error())
+				return
+			}
 		}
+		fmt.Println("error creating content, error: ", err.Error())
+		return
 	}
 
 	fmt.Println("id - ", id)
