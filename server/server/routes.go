@@ -24,6 +24,8 @@ func routes(router *mux.Router) {
 	router.Handle("/cards", cards.GetCards()).Methods(http.MethodGet)
 	router.Handle("/card/{id}", cards.GetCardByID()).Methods(http.MethodGet)
 
+	router.Handle("/contents/{id}/comments", cards.GetCommentsByID()).Methods(http.MethodGet)
+
 }
 
 func health() http.HandlerFunc {

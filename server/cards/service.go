@@ -17,6 +17,10 @@ type Cards struct {
 	Cards []Card `json:"cards"`
 }
 
+type Comments struct {
+	Comments []Comment `json:"comments,omitempty"`
+}
+
 func GetCards() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
@@ -56,6 +60,24 @@ func GetCardByID() http.HandlerFunc {
 			fmt.Print("errorr pottii", err.Error())
 		}
 		api.RespondWithJSON(rw, http.StatusOK, resp)
+
+	})
+}
+
+func GetCommentsByID() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		var comments Comments
+		vars := mux.Vars(req)
+		contentID := vars["id"]
+		userID := req.Context().Value("user")
+		resp, err := GetCommentsByContentID(userID.(string), contentID)
+		if err != nil {
+			fmt.Print("errorr pottii", err.Error())
+		}
+
+		comments.Comments = resp
+		api.RespondWithJSON(rw, http.StatusOK, comments)
 
 	})
 }
