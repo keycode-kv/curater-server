@@ -14,6 +14,7 @@ const (
 	getCards = `        
 		SELECT 
 		    c.id,
+		    c.collection_id,
 		    ct.id as content_id,
 		    ct.title,
 		    ct.content,
@@ -154,6 +155,7 @@ const (
 
 type Card struct {
 	ID            int      `db:"id" json:"id,omitempty"`
+	CollectionID  int      `db:"collection_id" json:"collection_id"`
 	ContentID     int      `db:"content_id" json:"-"`
 	Title         string   `db:"title" json:"title,omitempty"`
 	Content       string   `db:"content" json:"-"`
