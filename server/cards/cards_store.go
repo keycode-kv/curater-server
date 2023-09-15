@@ -94,7 +94,6 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 		query = query + fmt.Sprintf(getSearchClause, filters.Search, filters.Search, filters.Search)
 	}
 
-	fmt.Println(userID)
 	err := app.GetDB().Select(&cards, query, userID)
 	if err != nil {
 		return nil, err
@@ -103,20 +102,16 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 	for i, card := range cards {
 		tags, err := GetTagsForCard(card.ID)
 		if err != nil {
-			fmt.Println("ivf")
-
 			return nil, err
 		}
 
 		cards[i].Rating, cards[i].RatingCount, err = GetRatingForContent(card.ContentID)
 		if err != nil {
-			fmt.Println("ivfr")
 			return nil, err
 		}
 
 		cards[i].CommentsCount, err = GetCommentsForContent(card.ContentID)
 		if err != nil {
-			fmt.Println("ivfrs ")
 
 			return nil, err
 		}

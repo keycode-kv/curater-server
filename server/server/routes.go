@@ -4,8 +4,9 @@ import (
 	"curater/auth"
 	"curater/cards"
 	"fmt"
-	"github.com/gorilla/mux"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func routes(router *mux.Router) {
@@ -13,7 +14,13 @@ func routes(router *mux.Router) {
 
 	router.Handle("/login", auth.Login()).Methods(http.MethodPost)
 
+	router.Handle("/signup", auth.SignUp()).Methods(http.MethodPost)
+	router.Handle("/profile", auth.GetProfile()).Methods(http.MethodGet)
+	router.Handle("/users/{id}/collections", auth.GetUserCollections()).Methods(http.MethodGet)
+	router.Handle("/configuration", auth.GetRedirectConfig()).Methods(http.MethodGet)
+
 	router.Handle("/cards", loginMiddleware(cards.GetCards())).Methods(http.MethodGet)
+
 }
 
 func health() http.HandlerFunc {
