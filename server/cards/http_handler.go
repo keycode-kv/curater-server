@@ -49,3 +49,29 @@ func UpdateCard() http.HandlerFunc {
 		api.RespondWithJSON(rw, http.StatusOK, cardInfo)
 	})
 }
+
+func PostComment() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		ctx := req.Context()
+		vars := mux.Vars(req)
+		contentID, _ := strconv.Atoi(vars["id"])
+
+		var request commentRequest
+		err := json.NewDecoder(req.Body).Decode(&request)
+		if err != nil {
+			fmt.Println("error while unmarshalling post comment request")
+			api.RespondWithJSON(rw, http.StatusBadRequest, []byte(""))
+			return
+		}
+		request.ContentID = int64(contentID)
+		commentInfo, err := postComment(ctx, request)
+		if err != nil {
+			fmt.Println("error updating card details, error: ", err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		api.RespondWithJSON(rw, http.StatusOK, commentInfo)
+	})
+}
