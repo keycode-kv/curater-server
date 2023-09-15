@@ -15,7 +15,7 @@ import (
 )
 
 const setContent = `INSERT INTO public."content"
-("content", title, source_email,plain_text,  created_at, updated_at)
+("content", title, source_email,plain_text,read_time,  created_at, updated_at)
 VALUES($1,$2,$3,$4,now(), now())
 RETURNING id;`
 
@@ -75,8 +75,10 @@ func (s NewsLetter) createContent(ctx context.Context) {
 		fmt.Println("error while parsing html", err.Error())
 		return
 	}
+	plainText := s.parsePlainText()
+	readTime := getReadTime(plainText)
 
-	err = app.GetDB().GetContext(ctx, &id, setContent, htmlText, strings.Replace(s.Header.Subject, "Fwd: ", "", 1), senderEmail, s.parsePlainText())
+	err = app.GetDB().GetContext(ctx, &id, setContent, htmlText, strings.Replace(s.Header.Subject, "Fwd: ", "", 1), senderEmail, plainText, readTime)
 	if err == nil {
 		go generateSummary(id)
 	}
@@ -115,6 +117,12 @@ func card(userID int64, contentID int64) (id int64, err error) {
 func (s NewsLetter) getUserID(ctx context.Context) (id int64, err error) {
 	err = app.GetDB().GetContext(ctx, &id, getUserIDFromEmail, s.Header.UserEmail)
 	return
+}
+
+func getReadTime(text string) int {
+	words := strings.Fields(text)
+	readTime := int(len(words)) / 180
+	return readTime
 }
 
 func generateSummary(id int64) (err error) {

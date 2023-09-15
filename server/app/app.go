@@ -12,8 +12,8 @@ const (
 	dbHost     = "localhost"
 	dbUser     = "postgres"
 	dbPassword = "postgres"
-	dbPort     = 5432
-	dbName     = "curater_db"
+	dbPort     = 5433
+	dbName     = "curater"
 )
 
 var db *sqlx.DB
