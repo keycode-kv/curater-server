@@ -19,7 +19,7 @@ func routes(router *mux.Router) {
 	router.Handle("/signup", auth.SignUp()).Methods(http.MethodPost)
 
 	router.Handle("/profile", auth.GetProfile()).Methods(http.MethodGet)
-	router.Handle("/users/{id}/collections", auth.GetUserCollections()).Methods(http.MethodGet)
+	router.Handle("/collections", auth.GetUserCollections()).Methods(http.MethodGet)
 	router.Handle("/configuration", auth.GetRedirectConfig()).Methods(http.MethodGet)
 
 	router.Handle("/cards", cards.GetCards()).Methods(http.MethodGet)

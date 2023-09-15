@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-
-	"github.com/gorilla/mux"
 )
 
 func Login() http.HandlerFunc {
@@ -82,9 +79,7 @@ func GetUserCollections() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		ctx := req.Context()
-		vars := mux.Vars(req)
-		userID, _ := strconv.Atoi(vars["id"])
-		collections, err := getCollections(ctx, int64(userID))
+		collections, err := getCollections(ctx)
 		if err != nil {
 			fmt.Println("error getting user collections: ", err.Error())
 			api.RespondWithJSON(rw, http.StatusInternalServerError, err.Error())

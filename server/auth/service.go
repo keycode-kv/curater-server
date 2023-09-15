@@ -117,9 +117,14 @@ func getProfile(ctx context.Context) (user userProfile, err error) {
 	return
 }
 
-func getCollections(ctx context.Context, userID int64) (collections collectionList, err error) {
+func getCollections(ctx context.Context) (collections collectionList, err error) {
+	userInfo, err := getUserByEmail(ctx)
+	if err != nil {
+		fmt.Printf("error getting user: %s, error: %s\n", ctx.Value("user"), err.Error())
+		return
+	}
 
-	collectionList, err := getCollectionsByUserID(ctx, userID)
+	collectionList, err := getCollectionsByUserID(ctx, userInfo.ID)
 	if err != nil {
 		fmt.Printf("error getting article count for user %s, error: %s\n", ctx.Value("user"), err.Error())
 		return
