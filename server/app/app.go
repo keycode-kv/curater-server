@@ -2,9 +2,10 @@ package app
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"log"
 )
 
 const (
@@ -12,7 +13,7 @@ const (
 	dbUser     = "postgres"
 	dbPassword = "postgres"
 	dbPort     = 5432
-	dbName     = "curater"
+	dbName     = "curater_db"
 )
 
 var db *sqlx.DB

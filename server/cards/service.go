@@ -1,10 +1,12 @@
 package cards
 
 import (
+	"context"
 	"curater/server/api"
 	"fmt"
-	"github.com/gorilla/mux"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type Filter struct {
@@ -15,6 +17,22 @@ type Filter struct {
 
 type Cards struct {
 	Cards []Card `json:"cards"`
+}
+
+type tagListRespose struct {
+	Tags []string `json:"tags"`
+}
+
+type updateCardRequest struct {
+	ID           int64  `json:"id"`
+	Status       string `json:"status"`
+	CollectionID int64  `json:"collection_id"`
+	IsViewed     bool   `json:"is_viewed"`
+}
+
+type updateCardResponse struct {
+	ID     int64  `json:"id"`
+	Status string `json:"status"`
 }
 
 func GetCards() http.HandlerFunc {
@@ -56,6 +74,29 @@ func GetCardByID() http.HandlerFunc {
 			fmt.Print("errorr pottii", err.Error())
 		}
 		api.RespondWithJSON(rw, http.StatusOK, resp)
-
 	})
+}
+
+func getAllTags(ctx context.Context) (tags tagListRespose, err error) {
+
+	tagList, err := getTagList(ctx)
+	if err != nil {
+		fmt.Printf("error getting tag list, error: %s\n", err.Error())
+		return
+	}
+	tags.Tags = tagList
+	return
+}
+
+func updateCard(ctx context.Context, request updateCardRequest) (resposne updateCardResponse, err error) {
+	card, err := updateCardInfo(ctx, request)
+	if err != nil {
+		fmt.Printf("error updating card details, request: %+v, error: %s", request, err.Error())
+		return
+	}
+	resposne = updateCardResponse{
+		ID:     int64(card.ID),
+		Status: card.Status,
+	}
+	return
 }
