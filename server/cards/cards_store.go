@@ -121,9 +121,11 @@ const (
 	getTypeClause = ` AND
 			c.status = '%s'`
 
+	getCollectionClause = ` AND
+			c.collection_id = %s`
+
 	getSearchClause = ` AND (
 			ct.title ILIKE '%s' OR
-			ct.content ILIKE '%s' OR
 			ct.summary ILIKE '%s' 
 			)`
 
@@ -214,9 +216,19 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 	}
 	query = query + typeClause
 
+	if len(filters.Collection) != 0 {
+		query = query + fmt.Sprintf(getCollectionClause, filters.Collection)
+	}
+	cardTagMap := make(map[string]bool)
+	if len(filters.Tags) > 0 {
+		for _, tag := range filters.Tags {
+			cardTagMap[tag] = true
+		}
+	}
+
 	if len(filters.Search) != 0 {
 		filters.Search = "%" + filters.Search + "%"
-		query = query + fmt.Sprintf(getSearchClause, filters.Search, filters.Search, filters.Search)
+		query = query + fmt.Sprintf(getSearchClause, filters.Search, filters.Search)
 	}
 
 	err := app.GetDB().Select(&cards, query, userID)
@@ -224,6 +236,7 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 		fmt.Println("error selecting cards, error: ", err.Error())
 		return nil, err
 	}
+	filteredCards := []Card{}
 
 	for i, card := range cards {
 		tags, err := GetTagsForCard(card.ID)
@@ -238,27 +251,26 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 
 		cards[i].CommentsCount, err = GetCommentsForContent(card.ContentID)
 		if err != nil {
-
 			return nil, err
 		}
-
 		cards[i].Tags = tags
 		cards[i].Duration = EstimateReadTime(cards[i].Content, 200)
 		if len(filters.Tags) > 0 {
-			cardTagMap := make(map[string]bool)
+			var isMatch bool
 			for _, tag := range tags {
-				cardTagMap[tag] = true
-			}
-			var isNotMatch bool
-			for _, tag := range filters.Tags {
-				if !cardTagMap[tag] {
-					isNotMatch = true
+				if cardTagMap[tag] {
+					isMatch = true
+					break
 				}
 			}
-			if isNotMatch {
-				cards[i] = Card{}
+			if isMatch {
+				filteredCards = append(filteredCards, cards[i])
 			}
 		}
+	}
+
+	if len(filters.Tags) > 0 {
+		cards = filteredCards
 	}
 
 	return cards, nil

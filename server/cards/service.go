@@ -12,9 +12,10 @@ import (
 )
 
 type Filter struct {
-	Type   string
-	Search string
-	Tags   []string
+	Type       string
+	Search     string
+	Collection string
+	Tags       []string
 }
 
 type Cards struct {
@@ -57,12 +58,14 @@ func GetCards() http.HandlerFunc {
 		query := req.URL.Query()
 		cardType := query.Get("type")
 		search := query.Get("search")
+		collection := query.Get("collection")
 		tags := query["tags"]
 
 		filters := Filter{
-			Type:   cardType,
-			Search: search,
-			Tags:   tags,
+			Type:       cardType,
+			Search:     search,
+			Collection: collection,
+			Tags:       tags,
 		}
 
 		var cards Cards
