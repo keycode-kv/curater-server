@@ -3,6 +3,7 @@ package cards
 import (
 	"context"
 	"curater/server/api"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -42,6 +43,11 @@ type commentRequest struct {
 	ContentID int64  `json:"content_id"`
 	Comment   string `json:"comment"`
 	UserID    int64  `json:"user_id"`
+}
+
+type PostRatingRequest struct {
+	Rating    int `json:"rating"`
+	ContentID int `json:"content_id"`
 }
 
 func GetCards() http.HandlerFunc {
@@ -142,4 +148,25 @@ func postComment(ctx context.Context, request commentRequest) (response Comment,
 		return
 	}
 	return
+}
+
+func PostRating() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		var request PostRatingRequest
+
+		err := json.NewDecoder(req.Body).Decode(&request)
+		if err != nil {
+			api.RespondWithJSON(rw, http.StatusBadRequest, "error decoding request")
+			return
+		}
+		userID := req.Context().Value("user")
+		err = InsertRating(userID.(string), request)
+		if err != nil {
+			fmt.Print("errorr pottii", err.Error())
+			api.RespondWithJSON(rw, http.StatusBadRequest, err.Error())
+			return
+		}
+		api.RespondWithJSON(rw, http.StatusOK, "comment has been posted")
+
+	})
 }
