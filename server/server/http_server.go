@@ -37,6 +37,7 @@ func loginMiddleware(next http.Handler) http.Handler {
 		publicEndpoints := []string{
 			"/login",
 			"/signup",
+			"/newsletter",
 		}
 		for _, val := range publicEndpoints {
 			if val == r.RequestURI {

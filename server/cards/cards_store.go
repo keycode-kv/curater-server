@@ -63,6 +63,7 @@ const (
 					c.content_id
 			)
 			SELECT
+			    cnt.id,
 				cnt.content,
 				cnt.title,
 				COALESCE(r.average_rating, 0) AS rating,
@@ -75,6 +76,23 @@ const (
 				RatingInfo r ON ci.card_id = r.content_id
 			LEFT JOIN
 				CommentInfo cm ON cnt.id = cm.content_id
+		`
+
+	getCommentsByID = `
+			SELECT
+				c.id,
+				c.comment AS content,
+				u.name AS user,
+				CAST(EXTRACT(EPOCH FROM c.created_at)::int AS int) AS commented_at
+			FROM
+				comments c
+			JOIN
+				users u ON c.user_id = u.id
+			WHERE
+			    u.email = $1 AND
+				c.content_id = $2
+			ORDER BY
+				c.created_at ASC
 		`
 
 	getRatingByContent = `
@@ -140,10 +158,18 @@ type Card struct {
 }
 
 type ContentData struct {
+	ContentID    string  `db:"id" json:"content_id"`
 	Content      string  `db:"content" json:"content"`
 	Title        string  `db:"title" json:"title"`
 	Rating       float64 `db:"rating" json:"rating"`
 	CommentCount int64   `db:"comment_count" json:"comment_count"`
+}
+
+type Comment struct {
+	ID          string `db:"id" json:"id,omitempty"`
+	Content     string `db:"content" json:"content,omitempty"`
+	User        string `db:"user" json:"user,omitempty"`
+	CommentedAt int64  `db:"commented_at" json:"commented_at,omitempty"`
 }
 
 func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
@@ -268,6 +294,11 @@ func EstimateReadTime(htmlContent string, wordsPerMinute int) int {
 
 func GetCardByIDForUser(userID string, cardID string) (card ContentData, err error) {
 	err = app.GetDB().Get(&card, getCardByID, userID, cardID)
+	return
+}
+
+func GetCommentsByContentID(userID string, contentID string) (comments []Comment, err error) {
+	err = app.GetDB().Select(&comments, getCommentsByID, userID, contentID)
 	return
 }
 

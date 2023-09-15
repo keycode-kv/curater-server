@@ -3,6 +3,7 @@ package server
 import (
 	"curater/auth"
 	"curater/cards"
+	"curater/newsletter"
 	"fmt"
 	"net/http"
 
@@ -13,6 +14,8 @@ func routes(router *mux.Router) {
 	router.Handle("/health", health()).Methods(http.MethodGet)
 
 	router.Handle("/login", auth.Login()).Methods(http.MethodPost)
+
+	router.Handle("/newsletter", newsletter.HandleNewsletter()).Methods(http.MethodPost)
 	router.Handle("/signup", auth.SignUp()).Methods(http.MethodPost)
 
 	router.Handle("/profile", auth.GetProfile()).Methods(http.MethodGet)
@@ -23,6 +26,8 @@ func routes(router *mux.Router) {
 	router.Handle("/cards/{id}", cards.GetCardByID()).Methods(http.MethodGet)
 	router.Handle("/cards/{id}", cards.UpdateCard()).Methods(http.MethodPut)
 	router.Handle("/tags", cards.GetTags()).Methods(http.MethodGet)
+
+	router.Handle("/contents/{id}/comments", cards.GetCommentsByID()).Methods(http.MethodGet)
 
 }
 

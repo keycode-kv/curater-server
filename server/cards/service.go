@@ -34,6 +34,9 @@ type updateCardResponse struct {
 	ID     int64  `json:"id"`
 	Status string `json:"status"`
 }
+type Comments struct {
+	Comments []Comment `json:"comments,omitempty"`
+}
 
 func GetCards() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -99,4 +102,22 @@ func updateCard(ctx context.Context, request updateCardRequest) (resposne update
 		Status: card.Status,
 	}
 	return
+}
+
+func GetCommentsByID() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		var comments Comments
+		vars := mux.Vars(req)
+		contentID := vars["id"]
+		userID := req.Context().Value("user")
+		resp, err := GetCommentsByContentID(userID.(string), contentID)
+		if err != nil {
+			fmt.Print("errorr pottii", err.Error())
+		}
+
+		comments.Comments = resp
+		api.RespondWithJSON(rw, http.StatusOK, comments)
+
+	})
 }
