@@ -204,8 +204,11 @@ type Comment struct {
 	CommentedAt int64  `db:"commented_at" json:"commented_at,omitempty"`
 }
 
-func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
+func GetCardsForUser(userID string, filters Filter) (response Cards, err error) {
 	var cards []Card
+	response = Cards{
+		Cards: []Card{},
+	}
 
 	query := getCards
 
@@ -231,27 +234,30 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 		query = query + fmt.Sprintf(getSearchClause, filters.Search, filters.Search)
 	}
 
-	err := app.GetDB().Select(&cards, query, userID)
+	err = app.GetDB().Select(&cards, query, userID)
 	if err != nil {
 		fmt.Println("error selecting cards, error: ", err.Error())
-		return nil, err
+		return
+	}
+	if len(cards) > 0 {
+		response.Cards = cards
 	}
 	filteredCards := []Card{}
 
 	for i, card := range cards {
 		tags, err := GetTagsForCard(card.ID)
 		if err != nil {
-			return nil, err
+			return response, err
 		}
 
 		cards[i].Rating, cards[i].RatingCount, err = GetRatingForContent(card.ContentID)
 		if err != nil {
-			return nil, err
+			return response, err
 		}
 
 		cards[i].CommentsCount, err = GetCommentsForContent(card.ContentID)
 		if err != nil {
-			return nil, err
+			return response, err
 		}
 		cards[i].Tags = tags
 		cards[i].Duration = EstimateReadTime(cards[i].Content, 200)
@@ -270,10 +276,10 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 	}
 
 	if len(filters.Tags) > 0 {
-		cards = filteredCards
+		response.Cards = filteredCards
 	}
 
-	return cards, nil
+	return response, nil
 }
 
 func GetTagsForCard(cardID int) ([]string, error) {

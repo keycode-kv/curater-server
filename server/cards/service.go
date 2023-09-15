@@ -68,19 +68,13 @@ func GetCards() http.HandlerFunc {
 			Tags:       tags,
 		}
 
-		cards := Cards{
-			Cards: []Card{},
-		}
-
 		userID := req.Context().Value("user")
 		resp, err := GetCardsForUser(userID.(string), filters)
 		if err != nil {
 			fmt.Print("errorr pottii", err.Error())
 		}
 
-		cards.Cards = resp
-
-		api.RespondWithJSON(rw, http.StatusOK, cards)
+		api.RespondWithJSON(rw, http.StatusOK, resp)
 	})
 }
 
