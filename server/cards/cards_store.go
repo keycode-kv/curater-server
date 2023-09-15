@@ -221,6 +221,7 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 
 	err := app.GetDB().Select(&cards, query, userID)
 	if err != nil {
+		fmt.Println("error selecting cards, error: ", err.Error())
 		return nil, err
 	}
 
