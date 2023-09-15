@@ -75,7 +75,7 @@ const (
 			LEFT JOIN
 				content cnt ON ci.content_id = cnt.id
 			LEFT JOIN
-				RatingInfo r ON ci.card_id = r.content_id
+				RatingInfo r ON ci.content_id = r.content_id
 			LEFT JOIN
 				CommentInfo cm ON cnt.id = cm.content_id
 		`
