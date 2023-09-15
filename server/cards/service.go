@@ -39,6 +39,12 @@ type Comments struct {
 	Comments []Comment `json:"comments,omitempty"`
 }
 
+type commentRequest struct {
+	ContentID int64  `json:"content_id"`
+	Comment   string `json:"comment"`
+	UserID    int64  `json:"user_id"`
+}
+
 type PostRatingRequest struct {
 	Rating    int `json:"rating"`
 	ContentID int `json:"content_id"`
@@ -126,6 +132,22 @@ func GetCommentsByID() http.HandlerFunc {
 		api.RespondWithJSON(rw, http.StatusOK, comments)
 
 	})
+}
+
+func postComment(ctx context.Context, request commentRequest) (response Comment, err error) {
+	userInfo, err := getUserByEmail(ctx)
+	if err != nil {
+		fmt.Printf("error getting user: %s, error: %s\n", ctx.Value("user"), err.Error())
+		return
+	}
+
+	request.UserID = userInfo.ID
+	response, err = createComment(ctx, request)
+	if err != nil {
+		fmt.Printf("error updating card details, request: %+v, error: %s", request, err.Error())
+		return
+	}
+	return
 }
 
 func PostRating() http.HandlerFunc {

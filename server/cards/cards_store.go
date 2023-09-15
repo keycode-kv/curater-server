@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html"
 	"strings"
+	"time"
 )
 
 const (
@@ -82,7 +83,7 @@ const (
 	getCommentsByID = `
 			SELECT
 				c.id,
-				c.comment AS content,
+				c.comment,
 				u.name AS user,
 				CAST(EXTRACT(EPOCH FROM c.created_at)::int AS int) AS commented_at
 			FROM
@@ -151,8 +152,25 @@ const (
 	updateCardStats      = `, status = $%d`
 	updateCardCollection = `, collection_id = $%d`
 	updateCardIsViewed   = `, is_viewed = $%d`
+
+	createCommentQuery = `INSERT INTO "comments"
+		(user_id, content_id, "comment", created_at, updated_at)
+		VALUES($1, $2, $3, now(), now()) RETURNING id, comment,
+		CAST(EXTRACT(EPOCH FROM created_at)::int AS int) AS commented_at;`
+
+	getUserInfoByEmail = `SELECT id, email, "name", redirect_email
+		FROM users u WHERE email = $1;`
 )
 
+type user struct {
+	ID            int64     `json:"id" db:"id"`
+	Email         string    `json:"email" db:"email"`
+	Name          string    `json:"name" db:"name"`
+	Password      string    `json:"password" db:"password"`
+	RedirectEmail *string   `json:"redirect_email" db:"redirect_email"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+}
 type Card struct {
 	ID            int      `db:"id" json:"id,omitempty"`
 	CollectionID  int      `db:"collection_id" json:"collection_id"`
@@ -179,7 +197,7 @@ type ContentData struct {
 
 type Comment struct {
 	ID          string `db:"id" json:"id,omitempty"`
-	Content     string `db:"content" json:"content,omitempty"`
+	Comment     string `db:"comment" json:"comment,omitempty"`
 	User        string `db:"user" json:"user,omitempty"`
 	CommentedAt int64  `db:"commented_at" json:"commented_at,omitempty"`
 }
@@ -381,6 +399,22 @@ func updateCardInfo(ctx context.Context, request updateCardRequest) (cardInfo Ca
 	// fmt.Println("query: ", query)
 	// fmt.Println("argsList: ", argsList)
 	err = app.GetDB().GetContext(ctx, &cardInfo, query, argsList...)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func createComment(ctx context.Context, request commentRequest) (resp Comment, err error) {
+	err = app.GetDB().GetContext(ctx, &resp, createCommentQuery, request.UserID, request.ContentID, request.Comment)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func getUserByEmail(ctx context.Context) (userInfo user, err error) {
+	err = app.GetDB().GetContext(ctx, &userInfo, getUserInfoByEmail, ctx.Value("user"))
 	if err != nil {
 		return
 	}
