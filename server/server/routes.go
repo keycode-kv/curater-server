@@ -20,8 +20,8 @@ func routes(router *mux.Router) {
 	router.Handle("/configuration", auth.GetRedirectConfig()).Methods(http.MethodGet)
 
 	router.Handle("/cards", cards.GetCards()).Methods(http.MethodGet)
-	router.Handle("/card/{id}", cards.GetCardByID()).Methods(http.MethodGet)
-	router.Handle("/card/{id}", cards.UpdateCard()).Methods(http.MethodPut)
+	router.Handle("/cards/{id}", cards.GetCardByID()).Methods(http.MethodGet)
+	router.Handle("/cards/{id}", cards.UpdateCard()).Methods(http.MethodPut)
 	router.Handle("/tags", cards.GetTags()).Methods(http.MethodGet)
 
 }
