@@ -82,9 +82,9 @@ func GetCardByID() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		vars := mux.Vars(req)
-		cardID := vars["id"]
-		userID := req.Context().Value("user")
-		resp, err := GetCardByIDForUser(userID.(string), cardID)
+		cardID, _ := strconv.Atoi(vars["id"])
+		userEmail := req.Context().Value("user")
+		resp, err := GetCardByIDForUser(req.Context(), userEmail.(string), int64(cardID))
 		if err != nil {
 			fmt.Print("errorr pottii", err.Error())
 		}
