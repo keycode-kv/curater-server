@@ -24,7 +24,7 @@ func startHTTPServer() (err error) {
 
 	port := 8082
 	fmt.Printf("Server is running on port %d...\n", port)
-	err = http.ListenAndServe(fmt.Sprintf("192.168.2.255:%d", port), corsHandler)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), corsHandler)
 	if err != nil {
 		fmt.Println(err)
 	}
