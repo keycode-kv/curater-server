@@ -12,6 +12,10 @@ type Filter struct {
 	Tags   []string
 }
 
+type Cards struct {
+	Cards []Card `json:"cards"`
+}
+
 func GetCards() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
@@ -26,12 +30,16 @@ func GetCards() http.HandlerFunc {
 			Tags:   tags,
 		}
 
+		var cards Cards
+
 		userID := req.Context().Value("user")
 		resp, err := GetCardsForUser(userID.(string), filters)
 		if err != nil {
 			fmt.Print("errorr pottii", err.Error())
 		}
 
-		api.RespondWithJSON(rw, http.StatusOK, resp)
+		cards.Cards = resp
+
+		api.RespondWithJSON(rw, http.StatusOK, cards)
 	})
 }

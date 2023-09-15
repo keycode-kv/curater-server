@@ -22,7 +22,8 @@ const (
 		    cards c inner join content ct on c.content_id = ct.id
 			inner join users u on c.user_id = u.id
 		WHERE
-			u.email = $1
+			u.email = $1 AND
+			ct.summary IS NOT NULL
         `
 
 	getRatingByContent = `
