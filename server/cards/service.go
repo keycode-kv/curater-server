@@ -37,7 +37,7 @@ type updateCardResponse struct {
 	Status string `json:"status"`
 }
 type Comments struct {
-	Comments []Comment `json:"comments,omitempty"`
+	Comments []Comment `json:"comments"`
 }
 
 type commentRequest struct {
@@ -120,19 +120,40 @@ func updateCard(ctx context.Context, request updateCardRequest) (resposne update
 func GetCommentsByID() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		var comments Comments
 		vars := mux.Vars(req)
 		contentID := vars["id"]
 		userID := req.Context().Value("user")
-		resp, err := GetCommentsByContentID(userID.(string), contentID)
+		resp, err := getComments(req.Context(), userID.(string), contentID)
 		if err != nil {
 			fmt.Print("errorr pottii", err.Error())
 		}
 
-		comments.Comments = resp
-		api.RespondWithJSON(rw, http.StatusOK, comments)
+		api.RespondWithJSON(rw, http.StatusOK, resp)
 
 	})
+}
+
+func getComments(ctx context.Context, userID string, contentID string) (Comments, error) {
+
+	comments := Comments{
+		Comments: []Comment{},
+	}
+	commentList, err := getCommentsByContentID(userID, contentID)
+	if err != nil {
+		fmt.Printf("error getting article count for user %s, error: %s\n", ctx.Value("user"), err.Error())
+		return comments, err
+	}
+
+	for _, item := range commentList {
+		comments.Comments = append(comments.Comments, Comment{
+			ID:          item.ID,
+			Comment:     item.Comment,
+			User:        item.User,
+			CommentedAt: item.CommentedAt,
+		})
+	}
+
+	return comments, err
 }
 
 func postComment(ctx context.Context, request commentRequest) (response Comment, err error) {

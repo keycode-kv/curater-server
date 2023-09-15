@@ -328,7 +328,7 @@ func GetCardByIDForUser(userID string, cardID string) (card ContentData, err err
 	return
 }
 
-func GetCommentsByContentID(userID string, contentID string) (comments []Comment, err error) {
+func getCommentsByContentID(userID string, contentID string) (comments []Comment, err error) {
 	err = app.GetDB().Select(&comments, getCommentsByID, userID, contentID)
 	return
 }
