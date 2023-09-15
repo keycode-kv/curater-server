@@ -19,8 +19,8 @@ const (
 		    ct.id as content_id,
 		    ct.title,
 		    ct.content,
-			ct.view_count,
-			ct.source_email
+			ct.source_email,
+			ct.summary
 		FROM
 		    cards c 
 		INNER JOIN 
@@ -32,12 +32,15 @@ const (
 			ct.summary IS NOT NULL
         `
 
+	getContentViewedCount = `SELECT count(id) FROM cards WHERE is_viewed = true AND content_id = $1;`
+
 	getCardByID = `
 			WITH CardInfo AS (
 				SELECT
 					c.id AS card_id,
 					c.content_id,
-					u.email AS user_email
+					u.email AS user_email,
+					c.is_viewed
 				FROM
 					cards c
 				JOIN
@@ -68,6 +71,7 @@ const (
 			    cnt.id,
 				cnt.content,
 				cnt.title,
+				ci.is_viewed,
 				COALESCE(r.average_rating, 0) AS rating,
 				COALESCE(cm.total_comment_count, 0) AS comment_count
 			FROM
@@ -75,7 +79,7 @@ const (
 			LEFT JOIN
 				content cnt ON ci.content_id = cnt.id
 			LEFT JOIN
-				RatingInfo r ON ci.card_id = r.content_id
+				RatingInfo r ON ci.content_id = r.content_id
 			LEFT JOIN
 				CommentInfo cm ON cnt.id = cm.content_id
 		`
@@ -121,9 +125,11 @@ const (
 	getTypeClause = ` AND
 			c.status = '%s'`
 
+	getCollectionClause = ` AND
+			c.collection_id = %s`
+
 	getSearchClause = ` AND (
 			ct.title ILIKE '%s' OR
-			ct.content ILIKE '%s' OR
 			ct.summary ILIKE '%s' 
 			)`
 
@@ -172,19 +178,20 @@ type user struct {
 	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 type Card struct {
-	ID            int      `db:"id" json:"id,omitempty"`
+	ID            int      `db:"id" json:"id"`
 	CollectionID  *int     `db:"collection_id" json:"collection_id"`
-	ContentID     int      `db:"content_id" json:"-"`
-	Title         string   `db:"title" json:"title,omitempty"`
+	ContentID     int      `db:"content_id" json:"content_id"`
+	Title         string   `db:"title" json:"title"`
 	Content       string   `db:"content" json:"-"`
 	Status        string   `db:"status" json:"-"`
+	Summary       string   `db:"summary" json:"summary"`
 	Rating        float64  `json:"rating"`
 	RatingCount   int      `json:"rating_count"`
 	CommentsCount int      `json:"comments_count"`
-	ViewCount     int      `db:"view_count" json:"view_count,omitempty"`
-	SourceEmail   string   `db:"source_email" json:"source_email,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	Duration      int      `json:"duration,omitempty"`
+	ViewCount     int      `db:"view_count" json:"view_count"`
+	SourceEmail   string   `db:"source_email" json:"source_email"`
+	Tags          []string `json:"tags"`
+	Duration      int      `json:"duration"`
 }
 
 type ContentData struct {
@@ -193,6 +200,7 @@ type ContentData struct {
 	Title        string  `db:"title" json:"title"`
 	Rating       float64 `db:"rating" json:"rating"`
 	CommentCount int64   `db:"comment_count" json:"comment_count"`
+	IsViewed     bool    `db:"is_viewed" json:"-"`
 }
 
 type Comment struct {
@@ -202,8 +210,11 @@ type Comment struct {
 	CommentedAt int64  `db:"commented_at" json:"commented_at,omitempty"`
 }
 
-func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
+func GetCardsForUser(userID string, filters Filter) (response Cards, err error) {
 	var cards []Card
+	response = Cards{
+		Cards: []Card{},
+	}
 
 	query := getCards
 
@@ -214,54 +225,75 @@ func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
 	}
 	query = query + typeClause
 
+	if len(filters.Collection) != 0 {
+		query = query + fmt.Sprintf(getCollectionClause, filters.Collection)
+	}
+	cardTagMap := make(map[string]bool)
+	if len(filters.Tags) > 0 {
+		for _, tag := range filters.Tags {
+			cardTagMap[tag] = true
+		}
+	}
+
 	if len(filters.Search) != 0 {
 		filters.Search = "%" + filters.Search + "%"
-		query = query + fmt.Sprintf(getSearchClause, filters.Search, filters.Search, filters.Search)
+		query = query + fmt.Sprintf(getSearchClause, filters.Search, filters.Search)
 	}
 
-	err := app.GetDB().Select(&cards, query, userID)
+	err = app.GetDB().Select(&cards, query, userID)
 	if err != nil {
 		fmt.Println("error selecting cards, error: ", err.Error())
-		return nil, err
+		return
 	}
+	if len(cards) > 0 {
+		response.Cards = cards
+	}
+	filteredCards := []Card{}
 
 	for i, card := range cards {
+		var viewCount int
+		err = app.GetDB().Get(&viewCount, getContentViewedCount, card.ContentID)
+		if err != nil {
+			fmt.Printf("error getting viewed count, error: %s, content_id: %d", err.Error(), card.ContentID)
+			return
+		}
+		cards[i].ViewCount = viewCount
+
 		tags, err := GetTagsForCard(card.ID)
 		if err != nil {
-			return nil, err
+			return response, err
 		}
 
 		cards[i].Rating, cards[i].RatingCount, err = GetRatingForContent(card.ContentID)
 		if err != nil {
-			return nil, err
+			return response, err
 		}
 
 		cards[i].CommentsCount, err = GetCommentsForContent(card.ContentID)
 		if err != nil {
-
-			return nil, err
+			return response, err
 		}
-
 		cards[i].Tags = tags
 		cards[i].Duration = EstimateReadTime(cards[i].Content, 200)
 		if len(filters.Tags) > 0 {
-			cardTagMap := make(map[string]bool)
+			var isMatch bool
 			for _, tag := range tags {
-				cardTagMap[tag] = true
-			}
-			var isNotMatch bool
-			for _, tag := range filters.Tags {
-				if !cardTagMap[tag] {
-					isNotMatch = true
+				if cardTagMap[tag] {
+					isMatch = true
+					break
 				}
 			}
-			if isNotMatch {
-				cards[i] = Card{}
+			if isMatch {
+				filteredCards = append(filteredCards, cards[i])
 			}
 		}
 	}
 
-	return cards, nil
+	if len(filters.Tags) > 0 {
+		response.Cards = filteredCards
+	}
+
+	return response, nil
 }
 
 func GetTagsForCard(cardID int) ([]string, error) {
@@ -323,12 +355,24 @@ func EstimateReadTime(htmlContent string, wordsPerMinute int) int {
 	return readTime
 }
 
-func GetCardByIDForUser(userID string, cardID string) (card ContentData, err error) {
-	err = app.GetDB().Get(&card, getCardByID, userID, cardID)
+func GetCardByIDForUser(ctx context.Context, userEmail string, cardID int64) (card ContentData, err error) {
+	err = app.GetDB().Get(&card, getCardByID, userEmail, cardID)
+	if err != nil {
+		fmt.Println("error getting card by id, error: ", err.Error())
+		return
+	}
+	fmt.Println("CARD: ", card.IsViewed)
+	if !card.IsViewed {
+		_, err = updateCardViewStatus(ctx, cardID)
+		if err != nil {
+			fmt.Println("error updating card viewed status, error: ", err.Error())
+			return
+		}
+	}
 	return
 }
 
-func GetCommentsByContentID(userID string, contentID string) (comments []Comment, err error) {
+func getCommentsByContentID(userID string, contentID string) (comments []Comment, err error) {
 	err = app.GetDB().Select(&comments, getCommentsByID, userID, contentID)
 	return
 }
@@ -397,8 +441,6 @@ func updateCardInfo(ctx context.Context, request updateCardRequest) (cardInfo Ca
 	}
 	query += updateCardByIDWhereClause
 
-	// fmt.Println("query: ", query)
-	// fmt.Println("argsList: ", argsList)
 	err = app.GetDB().GetContext(ctx, &cardInfo, query, argsList...)
 	if err != nil {
 		return
@@ -416,6 +458,20 @@ func createComment(ctx context.Context, request commentRequest) (resp Comment, e
 
 func getUserByEmail(ctx context.Context) (userInfo user, err error) {
 	err = app.GetDB().GetContext(ctx, &userInfo, getUserInfoByEmail, ctx.Value("user"))
+	if err != nil {
+		return
+	}
+	return
+}
+
+func updateCardViewStatus(ctx context.Context, cardID int64) (cardInfo Card, err error) {
+	var argsList []interface{}
+	query := updateCardByIDQuery
+	argsList = append(argsList, cardID, true)
+	query += fmt.Sprintf(updateCardIsViewed, len(argsList))
+	query += updateCardByIDWhereClause
+
+	err = app.GetDB().GetContext(ctx, &cardInfo, query, argsList...)
 	if err != nil {
 		return
 	}
