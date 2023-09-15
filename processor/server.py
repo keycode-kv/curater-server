@@ -19,7 +19,7 @@ import openai
 import psycopg2
 
 app = Flask(__name__)
-OPENAI_API_KEY = ""
+OPENAI_API_KEY = "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"
 
 os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -29,7 +29,7 @@ db_params = {
     "user": "postgres",
     "password": "postgres",
     "host": "localhost",  # or the address of your PostgreSQL server
-    "port": 5432  # Default PostgreSQL port
+    "port": 5433  # Default PostgreSQL port
 }
 
 # Initialize a global database connection object
