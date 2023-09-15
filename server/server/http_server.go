@@ -49,6 +49,7 @@ func loginMiddleware(next http.Handler) http.Handler {
 		token := r.Header.Get("Authorization")
 		if token == "" {
 			fmt.Println("Authorization header is missing")
+			api.RespondWithJSON(w, http.StatusUnauthorized, "Authorization header is missing")
 			return
 		}
 
