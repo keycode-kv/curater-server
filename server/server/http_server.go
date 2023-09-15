@@ -41,6 +41,11 @@ func loginMiddleware(next http.Handler) http.Handler {
 		}
 
 		token := r.Header.Get("Authorization")
+		if token == "" {
+			fmt.Println("Authorization header is missing")
+			return
+		}
+
 		user, err := base64.StdEncoding.DecodeString(token)
 		if err != nil {
 			fmt.Println("error decoding token ", err.Error())
