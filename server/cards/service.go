@@ -3,6 +3,7 @@ package cards
 import (
 	"curater/server/api"
 	"fmt"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
@@ -41,5 +42,20 @@ func GetCards() http.HandlerFunc {
 		cards.Cards = resp
 
 		api.RespondWithJSON(rw, http.StatusOK, cards)
+	})
+}
+
+func GetCardByID() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		vars := mux.Vars(req)
+		cardID := vars["id"]
+		userID := req.Context().Value("user")
+		resp, err := GetCardByIDForUser(userID.(string), cardID)
+		if err != nil {
+			fmt.Print("errorr pottii", err.Error())
+		}
+		api.RespondWithJSON(rw, http.StatusOK, resp)
+
 	})
 }
