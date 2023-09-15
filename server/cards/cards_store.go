@@ -19,12 +19,62 @@ const (
 			ct.view_count,
 			ct.source_email
 		FROM
-		    cards c inner join content ct on c.content_id = ct.id
-			inner join users u on c.user_id = u.id
+		    cards c 
+		INNER JOIN 
+		    content ct on c.content_id = ct.id
+		INNER JOIN 
+		    users u on c.user_id = u.id
 		WHERE
 			u.email = $1 AND
 			ct.summary IS NOT NULL
         `
+
+	getCardByID = `
+			WITH CardInfo AS (
+				SELECT
+					c.id AS card_id,
+					c.content_id,
+					u.email AS user_email
+				FROM
+					cards c
+				JOIN
+					users u ON c.user_id = u.id
+				WHERE
+					u.email = $1
+					AND c.id = $2
+			),
+			RatingInfo AS (
+				SELECT
+					r.content_id,
+					COALESCE(AVG(r.rating), 0) AS average_rating
+				FROM
+					rating r
+				GROUP BY
+					r.content_id
+			),
+			CommentInfo AS (
+				SELECT
+					c.content_id,
+					COUNT(c.id) AS total_comment_count
+				FROM
+					comments c
+				GROUP BY
+					c.content_id
+			)
+			SELECT
+				cnt.content,
+				cnt.title,
+				COALESCE(r.average_rating, 0) AS rating,
+				COALESCE(cm.total_comment_count, 0) AS comment_count
+			FROM
+				CardInfo ci
+			LEFT JOIN
+				content cnt ON ci.content_id = cnt.id
+			LEFT JOIN
+				RatingInfo r ON ci.card_id = r.content_id
+			LEFT JOIN
+				CommentInfo cm ON cnt.id = cm.content_id
+		`
 
 	getRatingByContent = `
 		SELECT
@@ -76,6 +126,13 @@ type Card struct {
 	SourceEmail   string   `db:"source_email" json:"source_email,omitempty"`
 	Tags          []string `json:"tags,omitempty"`
 	Duration      int      `json:"duration,omitempty"`
+}
+
+type ContentData struct {
+	Content      string  `db:"content" json:"content"`
+	Title        string  `db:"title" json:"title"`
+	Rating       float64 `db:"rating" json:"rating"`
+	CommentCount int64   `db:"comment_count" json:"comment_count"`
 }
 
 func GetCardsForUser(userID string, filters Filter) ([]Card, error) {
@@ -196,6 +253,11 @@ func EstimateReadTime(htmlContent string, wordsPerMinute int) int {
 	}
 
 	return readTime
+}
+
+func GetCardByIDForUser(userID string, cardID string) (card ContentData, err error) {
+	err = app.GetDB().Get(&card, getCardByID, userID, cardID)
+	return
 }
 
 // stripHTMLTags removes HTML tags from a string.
