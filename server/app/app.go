@@ -2,17 +2,18 @@ package app
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"log"
 )
 
 const (
 	dbHost     = "localhost"
 	dbUser     = "postgres"
 	dbPassword = "postgres"
-	dbPort     = 5433
-	dbName     = "curater"
+	dbPort     = 5432
+	dbName     = "curater_db"
 )
 
 var db *sqlx.DB
