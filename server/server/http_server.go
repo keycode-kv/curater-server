@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -16,10 +17,14 @@ func startHTTPServer() (err error) {
 	router.Use(loginMiddleware)
 
 	routes(router)
+	headersOk := handlers.AllowedHeaders([]string{"Content-Type", "Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+	corsHandler := handlers.CORS(headersOk, originsOk, methodsOk)(router)
 
 	port := 8082
 	fmt.Printf("Server is running on port %d...\n", port)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+	err = http.ListenAndServe(fmt.Sprintf("192.168.2.255:%d", port), corsHandler)
 	if err != nil {
 		fmt.Println(err)
 	}
