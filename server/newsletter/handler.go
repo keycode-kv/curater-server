@@ -5,10 +5,13 @@ import (
 	"curater/app"
 	"curater/server/api"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/gojektech/heimdall/v6/httpclient"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const setContent = `INSERT INTO public."content"
@@ -34,6 +37,10 @@ type NewsLetter struct {
 	Header      Headers `json:"headers"`
 	PlainText   string  `json:"plain"`
 	HTMLContent string  `json:"html"`
+}
+
+type SummaryRequest struct {
+	ID int64 `json:"id"`
 }
 
 func HandleNewsletter() http.HandlerFunc {
@@ -71,7 +78,7 @@ func (s NewsLetter) createContent(ctx context.Context) {
 
 	err = app.GetDB().GetContext(ctx, &id, setContent, htmlText, strings.Replace(s.Header.Subject, "Fwd: ", "", 1), senderEmail, s.parsePlainText())
 	if err == nil {
-		generateSummary(id)
+		go generateSummary(id)
 	}
 
 	if err != nil && err.Error() == "pq: duplicate key value violates unique constraint \"content_title_source_email\"" {
@@ -110,8 +117,27 @@ func (s NewsLetter) getUserID(ctx context.Context) (id int64, err error) {
 	return
 }
 
-func generateSummary(id int64) {
+func generateSummary(id int64) (err error) {
+	req := SummaryRequest{ID: id}
+	reqJSON, err := json.Marshal(req)
+	if err != nil {
+		fmt.Println("cant marshal", err.Error())
+		return
+	}
 
+	client := httpclient.NewClient(httpclient.WithHTTPTimeout(30 * time.Second))
+
+	resp, err := api.Post(context.Background(), "http://localhost:9223/summarize", reqJSON, nil, client)
+	if err != nil {
+		fmt.Println("error calling api", err.Error())
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = errors.New("not 200 from ai server")
+		return
+	}
+	return
 }
 
 func extractEmailBeforeLastDate(text string) string {

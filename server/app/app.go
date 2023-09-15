@@ -11,7 +11,7 @@ const (
 	dbHost     = "localhost"
 	dbUser     = "postgres"
 	dbPassword = "postgres"
-	dbPort     = 5432
+	dbPort     = 5433
 	dbName     = "curater"
 )
 

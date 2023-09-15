@@ -2,8 +2,8 @@ package server
 
 import (
 	"curater/auth"
-	"curater/newsletter"
 	"curater/cards"
+	"curater/newsletter"
 	"fmt"
 	"net/http"
 
