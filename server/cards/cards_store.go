@@ -130,6 +130,17 @@ const (
         FROM content_tags ct
         JOIN tags t ON ct.tag_id = t.id
         WHERE ct.content_id = $1`
+
+	getUserFromEmail = `
+		SELECT id FROM users
+		WHERE email = $1
+`
+
+	insertRating = ` 
+		INSERT INTO rating (user_id, content_id, rating, created_at, updated_at) VALUES($1, $2, $3, now(), now())
+		        ON CONFLICT (user_id, content_id)
+        DO UPDATE SET rating = EXCLUDED.rating, updated_at = NOW()
+`
 )
 
 type Card struct {
@@ -289,6 +300,21 @@ func GetCardByIDForUser(userID string, cardID string) (card ContentData, err err
 func GetCommentsByContentID(userID string, contentID string) (comments []Comment, err error) {
 	err = app.GetDB().Select(&comments, getCommentsByID, userID, contentID)
 	return
+}
+
+func InsertRating(userEmail string, request PostRatingRequest) (err error) {
+	var userID int
+	err = app.GetDB().QueryRow(getUserFromEmail, userEmail).Scan(&userID)
+	if err != nil {
+		fmt.Println("error getting user")
+		return
+	}
+	_, err = app.GetDB().Exec(insertRating, userID, request.ContentID, request.Rating)
+	if err != nil {
+		fmt.Println("error inserting rating")
+		return
+	}
+	return nil
 }
 
 // stripHTMLTags removes HTML tags from a string.

@@ -2,6 +2,7 @@ package cards
 
 import (
 	"curater/server/api"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -19,6 +20,11 @@ type Cards struct {
 
 type Comments struct {
 	Comments []Comment `json:"comments,omitempty"`
+}
+
+type PostRatingRequest struct {
+	Rating    int `json:"rating"`
+	ContentID int `json:"content_id"`
 }
 
 func GetCards() http.HandlerFunc {
@@ -78,6 +84,27 @@ func GetCommentsByID() http.HandlerFunc {
 
 		comments.Comments = resp
 		api.RespondWithJSON(rw, http.StatusOK, comments)
+
+	})
+}
+
+func PostRating() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		var request PostRatingRequest
+
+		err := json.NewDecoder(req.Body).Decode(&request)
+		if err != nil {
+			api.RespondWithJSON(rw, http.StatusBadRequest, "error decoding request")
+			return
+		}
+		userID := req.Context().Value("user")
+		err = InsertRating(userID.(string), request)
+		if err != nil {
+			fmt.Print("errorr pottii", err.Error())
+			api.RespondWithJSON(rw, http.StatusBadRequest, err.Error())
+			return
+		}
+		api.RespondWithJSON(rw, http.StatusOK, "comment has been posted")
 
 	})
 }
