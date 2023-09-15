@@ -17,7 +17,7 @@ import (
 
 const setContent = `INSERT INTO public."content"
 ("content", title, source_email,plain_text,read_time,  created_at, updated_at)
-VALUES($1,$2,$3,$4,now(), now())
+VALUES($1,$2,$3,$4,$5,now(), now())
 RETURNING id;`
 
 const getIDBySubjectAndSender = `select id from "content" where title = $1 and source_email = $2`
@@ -79,17 +79,20 @@ func (s NewsLetter) createContent(ctx context.Context) {
 	plainText := s.parsePlainText()
 	readTime := getReadTime(plainText)
 
-	err = app.GetDB().GetContext(ctx, &id, setContent, htmlText, strings.Replace(s.Header.Subject, "Fwd: ", "", 1), senderEmail, plainText, readTime)
+	subject := strings.Replace(s.Header.Subject, "Fwd: ", "", 1)
+
+	err = app.GetDB().GetContext(ctx, &id, setContent, htmlText, subject, senderEmail, plainText, readTime)
 	if err == nil {
 		go generateSummary(id)
 	}
 
 	if err != nil {
 		if err.Error() == "pq: duplicate key value violates unique constraint \"content_title_source_email\"" {
-			fmt.Println("duplicate newsletter")
-			err = app.GetDB().GetContext(ctx, &id, getIDBySubjectAndSender, s.Header.Subject, senderEmail)
-			if err != nil {
-				fmt.Println("potti pandaaram adangi", err.Error())
+			fmt.Println("duplicate newsletter", id, err.Error(), "subject-", s.Header.Subject, "-sender-", senderEmail)
+			_err := app.GetDB().GetContext(ctx, &id, getIDBySubjectAndSender, subject, senderEmail)
+			if _err != nil {
+				fmt.Println("potti pandaaram adangi", _err.Error())
+				err = _err
 				return
 			}
 		}
