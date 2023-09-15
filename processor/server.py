@@ -19,7 +19,7 @@ import openai
 import psycopg2
 
 app = Flask(__name__)
-OPENAI_API_KEY = ""
+OPENAI_API_KEY = "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"
 
 os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -31,6 +31,14 @@ db_params = {
     "host": "localhost",  # or the address of your PostgreSQL server
     "port": 5432  # Default PostgreSQL port
 }
+
+# db_params = {
+#     "dbname": "curater",
+#     "user": "postgres",
+#     "password": "postgres",
+#     "host": "192.168.3.25",  # or the address of your PostgreSQL server
+#     "port": 5433  # Default PostgreSQL port
+# }
 
 # Initialize a global database connection object
 db_conn = psycopg2.connect(**db_params)
@@ -69,7 +77,7 @@ def summarize():
         summary, tags = parse_summary_and_tags(summarWithTags)
         print("summary", summary)
         print("tags", tags)
-        add_tag_to_content(content_id, tags)
+        add_tag_to_content(content_id, tags, summary)
 
         resp = {
                 "id": content_id,
@@ -81,8 +89,11 @@ def summarize():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-def add_tag_to_content(content_id, tags):
+
+def add_tag_to_content(content_id, tags, summary):
     try: 
+        db_cursor.execute("UPDATE content SET summary = %s WHERE id = %s RETURNING id;", (summary, content_id))
+
         tag_ids = []
         for tag in tags:
             db_cursor.execute("SELECT id FROM tags WHERE tag = %s;", (tag,))
@@ -98,11 +109,13 @@ def add_tag_to_content(content_id, tags):
 
         db_cursor.execute(insert_query)
 
+
         # Commit the transaction
         db_conn.commit()
         print("Tags inserted successfully!")
     except psycopg2.IntegrityError as e:
-        print("Tags are already added !")
+        print("error updating tags and summary !", e)
+        raise e
 
 
 def get_content(content_id): 
