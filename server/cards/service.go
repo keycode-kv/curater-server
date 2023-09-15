@@ -68,7 +68,9 @@ func GetCards() http.HandlerFunc {
 			Tags:       tags,
 		}
 
-		var cards Cards
+		cards := Cards{
+			Cards: []Card{},
+		}
 
 		userID := req.Context().Value("user")
 		resp, err := GetCardsForUser(userID.(string), filters)
