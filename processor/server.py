@@ -36,6 +36,11 @@ db_params = {
 db_conn = psycopg2.connect(**db_params)
 db_cursor = db_conn.cursor()
 
+class ResourceNotFound(Exception):
+    """Custom exception class."""
+    def __init__(self, message="resource not found"):
+        self.message = message
+        super().__init__(self.message)
 
 @app.route('/')
 def index():
@@ -57,26 +62,98 @@ def summarize():
         content_id = request_data['id']
 
         print("parse data", content_id)
-        # Query the "contents" table in your database
-        db_cursor.execute("SELECT * FROM content WHERE id = %s;", (content_id,))
-        result = db_cursor.fetchone()  # Assuming 'id' is unique, fetch one row
-        
-        if result:            
-            summary = summarize(result[8])
-            #todo save this
-            resp = {
-                "id": result[0],
-                "content": result[1], 
+        content = get_content(content_id)
+        tags = get_all_tags()
+        print(tags)
+        summarWithTags = summarizeAndTag(content, tags)
+        summary, tags = parse_summary_and_tags(summarWithTags)
+        print("summary", summary)
+        print("tags", tags)
+        add_tag_to_content(content_id, tags)
+
+        resp = {
+                "id": content_id,
                 "summary": summary
             }
-            return jsonify(resp)
-        else:
-            # users = [{'id': 1, 'username': 'Alice'}, {'id': 2, 'username': 'Bob'}]
-            # return jsonify(users, status=200, mimetype='application/json')
-
-            return jsonify({"error": "Content not found"}), 404
+        return jsonify(resp)
+    except ResourceNotFound as e:
+        return jsonify({"error": "Content not found"}), 404
     except Exception as e:
-        return "An error occurred: " + str(e)
+        return jsonify({"error": str(e)}), 500
+
+def add_tag_to_content(content_id, tags):
+    try: 
+        tag_ids = []
+        for tag in tags:
+            db_cursor.execute("SELECT id FROM tags WHERE tag = %s;", (tag,))
+            result = db_cursor.fetchone()
+            if result:
+                tag_ids.append(result[0])
+
+        # Insert records into the content_tags table in a single query
+        insert_query = """
+        INSERT INTO content_tags (content_id, tag_id) VALUES 
+        {}
+        """.format(", ".join("(%s, %s)" % (content_id, tag_id) for tag_id in tag_ids))
+
+        db_cursor.execute(insert_query)
+
+        # Commit the transaction
+        db_conn.commit()
+        print("Tags inserted successfully!")
+    except psycopg2.IntegrityError as e:
+        print("Tags are already added !")
+
+
+def get_content(content_id): 
+    # Query the "contents" table in your database
+    db_cursor.execute("SELECT * FROM content WHERE id = %s;", (content_id,))
+    result = db_cursor.fetchone()  # Assuming 'id' is unique, fetch one row
+    if result:            
+            return result[8]
+    else:
+            raise ResourceNotFound("content not found")
+    
+
+def get_all_tags():
+    db_cursor.execute("SELECT tag FROM tags")
+
+    # Fetch all the rows as a list of tuples
+    tag_records = db_cursor.fetchall()
+
+    # Extract the tag names from the tuples and store them in a list
+    tags = [record[0] for record in tag_records]
+    return tags
+
+def summarizeAndTag(text, tags):
+    # Define prompt
+    prompt_template = """Write a concise summary of the newsletter strictly following below criteria. 
+    1. Summary should only get key points and then group it into a paragraph with 30 to 40 words.
+    2. Avoid introduction and decalrative sentences 
+    3. Now associate 2 to 3 tags from  the following list which are relevant to this newsletter
+    """+str(tags)+"""
+    4. Output should be of the format
+       Summary:
+       Tags:
+
+    "{text}"
+    CONCISE SUMMARY:"""
+    print(prompt_template)
+    prompt = PromptTemplate.from_template(prompt_template)
+
+    docs = get_text_chunks_langchain(text)
+    # Define LLM chain
+    llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
+    llm_chain = LLMChain(llm=llm, prompt=prompt)
+
+    # Define StuffDocumentsChain
+    stuff_chain = StuffDocumentsChain(
+        llm_chain=llm_chain, document_variable_name="text"
+    )
+
+    # docs = loader.load()
+    print("summarizing")
+    return stuff_chain.run(docs)
 
 def summarize(text):
     # Define prompt
@@ -99,8 +176,31 @@ def summarize(text):
     )
 
     # docs = loader.load()
-    print("summarizing")
+    print("summarizing...")
     return stuff_chain.run(docs)
+
+def parse_summary_and_tags(input):
+    # Split the input text into lines
+    lines = input.split('\n')
+
+    # Initialize variables to store the summary and tags
+    summary = ""
+    tags = []
+
+    # Iterate through the lines to extract summary and tags
+    for line in lines:
+      if line.startswith("Summary: "):
+         # Extract the summary by removing the "Summary: " prefix
+         summary = line[len("Summary: "):]
+      elif line.startswith("Tags: "):
+         # Extract tags by splitting the comma-separated string into a list
+         tags = line[len("Tags: "):].split(', ')
+
+    # Print the parsed summary and tags
+    return summary, tags
+
+
+
 
 def get_text_chunks_langchain(text):
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
