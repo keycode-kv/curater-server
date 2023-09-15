@@ -145,7 +145,7 @@ def summarizeAndTag(text, tags):
     2. Avoid introduction and decalrative sentences 
     3. Now associate 2 to 3 tags from  the following list which are relevant to this newsletter
     """+str(tags)+"""
-    4. Output should be of the format
+    4. Output should strictly be of the format. Do not output in any other format other than below format.
        Summary:
        Tags:
 
