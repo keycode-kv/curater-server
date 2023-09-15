@@ -5,8 +5,9 @@ import (
 	"curater/server/api"
 	"encoding/base64"
 	"fmt"
-	"github.com/gorilla/mux"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func startHTTPServer() (err error) {
@@ -43,7 +44,7 @@ func loginMiddleware(next http.Handler) http.Handler {
 		user, err := base64.StdEncoding.DecodeString(token)
 		if err != nil {
 			fmt.Println("error decoding token ", err.Error())
-			api.RespondWithJSON(w, http.StatusInternalServerError, "")
+			api.RespondWithJSON(w, http.StatusUnauthorized, "")
 			return
 		}
 		ctx := context.WithValue(r.Context(), "user", string(user))

@@ -3,70 +3,146 @@ package auth
 import (
 	"context"
 	"crypto/sha256"
-	"curater/app"
-	"curater/server/api"
+	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 )
-
-const getUserDetailsByID = `select password from users where email = $1`
 
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type authToken struct {
+type authResponse struct {
 	Token string `json:"token"`
 }
 
-type userDetails struct {
-	Password string `db:"password"`
+type loginResponse struct {
+	Password      string `json:"password"`
+	RedirectEmail string `json:"redirect_email"`
 }
 
-func Login() http.HandlerFunc {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-
-		ctx := req.Context()
-
-		var loginReq loginRequest
-		err := json.NewDecoder(req.Body).Decode(&loginReq)
-		if err != nil {
-			fmt.Println("error while unmarshalling login request")
-			api.RespondWithJSON(rw, http.StatusBadRequest, []byte(""))
-			return
-		}
-
-		auth, err := loginReq.login(ctx)
-		if err != nil {
-			fmt.Println("auth potti", err.Error())
-			api.RespondWithJSON(rw, http.StatusUnauthorized, []byte(""))
-			return
-		}
-
-		api.RespondWithJSON(rw, http.StatusOK, auth)
-	})
+type signupRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-func (s loginRequest) login(ctx context.Context) (token authToken, err error) {
+type userProfile struct {
+	ID           int64  `json:"id"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	ArticleCount int64  `json:"article_count"`
+}
+
+type collectionInfo struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+type collectionList struct {
+	Collections []collectionInfo `json:"collections"`
+}
+
+type userConfigResponse struct {
+	RedirectEmail string `json:"redirect_email"`
+}
+
+func (s loginRequest) login(ctx context.Context) (resposne authResponse, err error) {
 	inputPword := Hash(s.Password)
 
-	var user userDetails
-
-	err = app.GetDB().GetContext(ctx, &user, getUserDetailsByID, s.Email)
+	userInfo, err := getLoginInfoByEmail(ctx, s.Email)
 	if err != nil {
+		fmt.Printf("error getting user: %s, error: %s\n", ctx.Value("user"), err.Error())
 		return
 	}
 
-	if inputPword == user.Password {
+	if inputPword == userInfo.Password {
 		tok := base64.StdEncoding.EncodeToString([]byte(s.Email))
-		token = authToken{Token: tok}
+		resposne = authResponse{
+			Token: tok,
+		}
 	} else {
 		err = errors.New("potti")
+	}
+	return
+}
+
+func (s signupRequest) signup(ctx context.Context) (response authResponse, err error) {
+	_, err = getLoginInfoByEmail(ctx, s.Email)
+	if err != nil && err != sql.ErrNoRows {
+		fmt.Printf("error checking existing user: %s\n", err.Error())
+		return
+	}
+	if err == nil {
+		err = errors.New("user account already exists")
+		return
+	}
+
+	_, err = createUser(ctx, s)
+	if err != nil {
+		fmt.Printf("error creating user: %s\n", err.Error())
+		return
+	}
+
+	token := base64.StdEncoding.EncodeToString([]byte(s.Email))
+	response = authResponse{
+		Token: token,
+	}
+	return
+}
+
+func getProfile(ctx context.Context) (user userProfile, err error) {
+	userInfo, err := getUserByEmail(ctx)
+	if err != nil {
+		fmt.Printf("error getting user: %s, error: %s\n", ctx.Value("user"), err.Error())
+		return
+	}
+
+	articleCount, err := getArticleCountByUserID(ctx)
+	if err != nil {
+		fmt.Printf("error getting article count for user %s, error: %s\n", ctx.Value("user"), err.Error())
+		return
+	}
+
+	user = userProfile{
+		ID:           userInfo.ID,
+		Name:         userInfo.Name,
+		Email:        userInfo.Email,
+		ArticleCount: articleCount,
+	}
+
+	return
+}
+
+func getCollections(ctx context.Context, userID int64) (collections collectionList, err error) {
+
+	collectionList, err := getCollectionsByUserID(ctx, userID)
+	if err != nil {
+		fmt.Printf("error getting article count for user %s, error: %s\n", ctx.Value("user"), err.Error())
+		return
+	}
+
+	for _, item := range collectionList {
+		collections.Collections = append(collections.Collections, collectionInfo{
+			ID:   item.ID,
+			Name: item.Name,
+		})
+	}
+
+	return
+}
+
+func getuserConfig(ctx context.Context) (response userConfigResponse, err error) {
+	redirectEmail, err := getUserConfigByEmail(ctx)
+	if err != nil {
+		fmt.Printf("error getting rediret email for user: %s, error: %s\n", ctx.Value("user"), err.Error())
+		return
+	}
+	if redirectEmail != nil {
+		response.RedirectEmail = *redirectEmail
 	}
 	return
 }
