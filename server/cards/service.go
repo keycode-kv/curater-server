@@ -103,13 +103,26 @@ func getAllTags(ctx context.Context) (tags tagListRespose, err error) {
 	return
 }
 
-func updateCard(ctx context.Context, request updateCardRequest) (resposne updateCardResponse, err error) {
+func updateCard(ctx context.Context, request updateCardRequest) (response updateCardResponse, err error) {
+	if request.CollectionID == 0 && request.Status == "saved" {
+		userInfo, err := getUserByEmail(ctx)
+		if err != nil {
+			fmt.Printf("error getting user: %s, error: %s\n", ctx.Value("user"), err.Error())
+			return response, err
+		}
+		collectionID, err := getDefaultCollectionIDByUserID(ctx, userInfo.ID)
+		if err != nil {
+			fmt.Printf("error getting user collection for user_id: %d, error: %s\n", userInfo.ID, err.Error())
+			return response, err
+		}
+		request.CollectionID = collectionID
+	}
 	card, err := updateCardInfo(ctx, request)
 	if err != nil {
 		fmt.Printf("error updating card details, request: %+v, error: %s", request, err.Error())
 		return
 	}
-	resposne = updateCardResponse{
+	response = updateCardResponse{
 		ID:     int64(card.ID),
 		Status: card.Status,
 	}

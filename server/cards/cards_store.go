@@ -140,8 +140,7 @@ const (
 
 	getUserFromEmail = `
 		SELECT id FROM users
-		WHERE email = $1
-`
+		WHERE email = $1`
 
 	insertRating = ` 
 		INSERT INTO rating (user_id, content_id, rating, created_at, updated_at) VALUES($1, $2, $3, now(), now())
@@ -166,6 +165,9 @@ const (
 
 	getUserInfoByEmail = `SELECT id, email, "name", redirect_email
 		FROM users u WHERE email = $1;`
+
+	getDefaultCollectionIDByUserIDQuery = `SELECT id FROM collection WHERE user_id = $1
+		ORDER BY created_at DESC LIMIT 1`
 )
 
 type user struct {
@@ -472,6 +474,14 @@ func updateCardViewStatus(ctx context.Context, cardID int64) (cardInfo Card, err
 	query += updateCardByIDWhereClause
 
 	err = app.GetDB().GetContext(ctx, &cardInfo, query, argsList...)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func getDefaultCollectionIDByUserID(ctx context.Context, userID int64) (collectionID int64, err error) {
+	err = app.GetDB().GetContext(ctx, &collectionID, getDefaultCollectionIDByUserIDQuery, userID)
 	if err != nil {
 		return
 	}

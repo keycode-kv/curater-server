@@ -208,7 +208,7 @@ def parse_summary_and_tags(input):
       elif line.startswith("Tags: "):
          # Extract tags by splitting the comma-separated string into a list
          tags = line[len("Tags: "):].split(', ')
-      else:
+      elif len(line) > 0:
          summary = line
 
     # Print the parsed summary and tags
