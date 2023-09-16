@@ -23,7 +23,7 @@ func Login() http.HandlerFunc {
 
 		auth, err := loginReq.login(ctx)
 		if err != nil {
-			fmt.Println("auth potti", err.Error())
+			fmt.Println("error while user login, error: ", err.Error())
 			api.RespondWithJSON(rw, http.StatusUnauthorized, []byte(""))
 			return
 		}
@@ -47,8 +47,8 @@ func SignUp() http.HandlerFunc {
 
 		auth, err := signupReq.signup(ctx)
 		if err != nil {
-			fmt.Println("signup potti", err.Error())
-			api.RespondWithJSON(rw, http.StatusBadRequest, err.Error())
+			fmt.Println("error sign up, error: ", err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error sign up")
 			return
 		}
 
@@ -67,7 +67,7 @@ func GetProfile() http.HandlerFunc {
 			if err == sql.ErrNoRows {
 				api.RespondWithJSON(rw, http.StatusNotFound, "user not found")
 			}
-			api.RespondWithJSON(rw, http.StatusInternalServerError, err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error getting user profile")
 			return
 		}
 
@@ -82,7 +82,7 @@ func GetUserCollections() http.HandlerFunc {
 		collections, err := getCollections(ctx)
 		if err != nil {
 			fmt.Println("error getting user collections: ", err.Error())
-			api.RespondWithJSON(rw, http.StatusInternalServerError, err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error getting user collections")
 			return
 		}
 
@@ -101,7 +101,7 @@ func GetRedirectConfig() http.HandlerFunc {
 			if err == sql.ErrNoRows {
 				api.RespondWithJSON(rw, http.StatusNotFound, "user not found")
 			}
-			api.RespondWithJSON(rw, http.StatusInternalServerError, err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error getting user config")
 			return
 		}
 

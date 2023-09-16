@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"curater/app"
-	"fmt"
 	"time"
 )
 
@@ -78,7 +77,6 @@ func getArticleCountByUserID(ctx context.Context) (articleCount int64, err error
 }
 
 func getCollectionsByUserID(ctx context.Context, userID int64) (collections []Collection, err error) {
-	fmt.Println("userID: ", userID)
 	err = app.GetDB().SelectContext(ctx, &collections, getCollectionsByUserIDQuery, userID)
 	if err != nil {
 		return

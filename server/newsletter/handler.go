@@ -91,7 +91,7 @@ func (s NewsLetter) createContent(ctx context.Context) {
 			fmt.Println("duplicate newsletter", id, err.Error(), "subject-", s.Header.Subject, "-sender-", senderEmail)
 			_err := app.GetDB().GetContext(ctx, &id, getIDBySubjectAndSender, subject, senderEmail)
 			if _err != nil {
-				fmt.Println("potti pandaaram adangi", _err.Error())
+				fmt.Println("error getting content by subject and sender, error: ", _err.Error())
 				err = _err
 				return
 			}
@@ -99,8 +99,6 @@ func (s NewsLetter) createContent(ctx context.Context) {
 		fmt.Println("error creating content, error: ", err.Error())
 		return
 	}
-
-	fmt.Println("id - ", id)
 
 	userID, err := s.getUserID(ctx)
 	if err != nil {
