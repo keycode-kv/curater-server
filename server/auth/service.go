@@ -65,7 +65,7 @@ func (s loginRequest) login(ctx context.Context) (resposne authResponse, err err
 			Token: tok,
 		}
 	} else {
-		err = errors.New("potti")
+		err = errors.New("login failed")
 	}
 	return
 }

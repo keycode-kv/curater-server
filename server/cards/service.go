@@ -71,7 +71,9 @@ func GetCards() http.HandlerFunc {
 		userID := req.Context().Value("user")
 		resp, err := GetCardsForUser(userID.(string), filters)
 		if err != nil {
-			fmt.Print("errorr pottii", err.Error())
+			fmt.Print("error getting cards list, error: ", err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error getting cards list")
+			return
 		}
 
 		api.RespondWithJSON(rw, http.StatusOK, resp)
@@ -86,7 +88,9 @@ func GetCardByID() http.HandlerFunc {
 		userEmail := req.Context().Value("user")
 		resp, err := GetCardByIDForUser(req.Context(), userEmail.(string), int64(cardID))
 		if err != nil {
-			fmt.Print("errorr pottii", err.Error())
+			fmt.Print("error getting card details, error: ", err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error getting card details")
+			return
 		}
 		api.RespondWithJSON(rw, http.StatusOK, resp)
 	})
@@ -137,7 +141,9 @@ func GetCommentsByID() http.HandlerFunc {
 		userID := req.Context().Value("user")
 		resp, err := getComments(req.Context(), userID.(string), contentID)
 		if err != nil {
-			fmt.Print("errorr pottii", err.Error())
+			fmt.Print("error getting comments, error: ", err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error getting comments")
+			return
 		}
 
 		api.RespondWithJSON(rw, http.StatusOK, resp)
@@ -199,8 +205,8 @@ func PostRating() http.HandlerFunc {
 		userID := req.Context().Value("user")
 		err = InsertRating(userID.(string), request)
 		if err != nil {
-			fmt.Print("errorr pottii", err.Error())
-			api.RespondWithJSON(rw, http.StatusBadRequest, err.Error())
+			fmt.Print("error adding rating, error: ", err.Error())
+			api.RespondWithJSON(rw, http.StatusInternalServerError, "error adding rating")
 			return
 		}
 		api.RespondWithJSON(rw, http.StatusOK, "rating has been submitted")

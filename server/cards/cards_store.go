@@ -363,7 +363,6 @@ func GetCardByIDForUser(ctx context.Context, userEmail string, cardID int64) (ca
 		fmt.Println("error getting card by id, error: ", err.Error())
 		return
 	}
-	fmt.Println("CARD: ", card.IsViewed)
 	if !card.IsViewed {
 		_, err = updateCardViewStatus(ctx, cardID)
 		if err != nil {
@@ -383,12 +382,12 @@ func InsertRating(userEmail string, request PostRatingRequest) (err error) {
 	var userID int
 	err = app.GetDB().QueryRow(getUserFromEmail, userEmail).Scan(&userID)
 	if err != nil {
-		fmt.Println("error getting user")
+		fmt.Println("error getting user, error: ", err.Error())
 		return
 	}
 	_, err = app.GetDB().Exec(insertRating, userID, request.ContentID, request.Rating)
 	if err != nil {
-		fmt.Println("error inserting rating")
+		fmt.Println("error inserting rating, error: ", err.Error())
 		return
 	}
 	return nil
